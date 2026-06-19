@@ -1,7 +1,7 @@
 # ESP very basic thermostat control
 # uses external sensor via requests/GET
 
-from machine import Pin, I2C
+from machine import Pin, I2C, RTC
 import time
 import socket
 import config
@@ -49,7 +49,19 @@ relayPin = Pin(15, Pin.OUT) # pin to control the relay
 relayPin.value(0)
 boilerOnOff = "Off"
 
+# instantiate the rtc
+rtc = RTC()
+
+#print the time for verification
+print(rtc.datetime())
+
+# variable for overriding thermostat to manually turn on heat
+overrideThermo = 0
+overrideMaxMins = 20 # will revert to thermo control after this many minutes
+overrideStartTime = 1 # using epoch time, set to 1 so we have declared the variable
 targetTemp = 19 # target temp for the boiler to achieve - set to something around what you'd usually have
+
+
 
 # get the temp every 30 seconds and create a rolling average over 5 mins
 # Store the last 10 readings (5 minutes at 30s intervals)
@@ -125,7 +137,20 @@ def get_target_value(theRequest):
         end = len(reqString)
 
     return reqString[start:end]
-    
+
+def get_override_value(theRequest):
+    reqString = theRequest.decode() # convert bytes to a string
+    key = "?override=" # set what we're looking for
+    idx = reqString.find(key)
+    if idx == -1:
+        return None # returns None if called w/out this parameter
+
+    start = idx + len(key)
+    end = reqString.find(" ", start)  # end of URL path
+    if end == -1:
+        end = len(reqString)
+
+    return reqString[start:end]
 
 def addCurrentTempToBuffer():
     global bufferIndex, bufferFilled
@@ -152,15 +177,16 @@ async def updateDisplay():
     global targetTemp
     global boilerOnOff
     global lcd
-    line1 = "Target: " + str(targetTemp)
-    line2 = "Boiler is: " + boilerOnOff.upper()
-    lcd.clear()
-    lcd.move_to(0, 0)
-    lcd.putstr(line1)
-    lcd.move_to(0, 1)
-    lcd.putstr(line2)
-    
-    await asyncio.sleep(25)
+    while True:
+        line1 = "Target: " + str(targetTemp)
+        line2 = "Boiler is: " + boilerOnOff.upper()
+        lcd.clear()
+        lcd.move_to(0, 0)
+        lcd.putstr(line1)
+        lcd.move_to(0, 1)
+        lcd.putstr(line2)
+        
+        await asyncio.sleep(25)
 
 async def getTempLoop():
     while True:
@@ -170,13 +196,30 @@ async def getTempLoop():
 async def boilerControl():
     global targetTemp
     global boilerOnOff
+    global overrideThermo
+    global overrideStartTime
+    global overrideMaxMins
     # get the average temperature
     # compare it to the target temp
     # turn boiler on or off accordingly
     while True:
         print("Called boiler loop")
         currentAverage = getRunningAverage()
-        if ( currentAverage > targetTemp ):
+
+        if overrideThermo == 1:
+            # check time elapsed since it was set
+            timeNow = time.mktime(rtc.datetime())
+            print(timeNow)
+            print(overrideStartTime)
+            print(timeNow - overrideStartTime)
+            print(overrideMaxMins)
+            if timeNow - overrideStartTime > (overrideMaxMins):
+                # turn on and start timer
+                overrideThermo = 0
+                overrideStartTime = 1
+                relayPin(0)
+                boilerOnOff = "Off"
+        elif ( currentAverage > targetTemp and overrideThermo == 0 ):
             relayPin(0)
             print("Turning boiler off")
             boilerOnOff = "Off"
@@ -192,6 +235,10 @@ async def displayWebPage():
     global html
     global boilerOnOff
     global thisSocket
+    global overrideThermo
+    global overrideMaxMins
+    global overrideStartTime
+    overrideThermoNow = 0
     print("Webserver listening")
     while True:
         # wrap the accept() in a try statement in case this function isn't currently the current task in the async business
@@ -214,11 +261,33 @@ async def displayWebPage():
         
         # ** get the temp value using get_target_value(theRequest)
         targetTempValue = get_target_value(request)
+        overrideThermoValue = get_override_value(request)
         if targetTempValue:
             # set the target temp variable
             print("Target set: ", targetTempValue)
             #print("Debug vartype: " , type(targetTempValue))
             targetTemp = float(targetTempValue)
+        if overrideThermoValue:
+            #print(overrideThermoValue, " ", type(overrideThermoValue))
+            overrideThermoNow = int(overrideThermoValue)
+        # if overrideThermoNow = 1, check if boiler on and time since it was set on manually 
+        if overrideThermoNow == 1:
+            # is it a value change
+            overrideThermoNow = 0
+            if overrideThermo == 0:
+                overrideThermo = 1
+                overrideStartTime = time.mktime(rtc.datetime())
+                relayPin(1)
+                boilerOnOff = "On"
+            else:
+                print("Already set on manually")
+        elif(overrideThermoNow == 2):
+            # manually turn off before 20 mins
+            overrideThermoNow = 0
+            overrideThermo = 0
+            relayPin(0)
+            boilerOnOff = "Off"
+
         # set boiler status text
         response = (
         html.replace("{boilerStatus}", boilerOnOff)
@@ -231,9 +300,18 @@ async def displayWebPage():
         conn.send('Connection: close\n\n')
         conn.sendall(response)
         conn.close()
+
         await asyncio.sleep(1)
 
-    
+async def debugMe():
+    global overrideThermo
+    global overrideStartTime
+    # prints variables every 4 seconds
+    while True:
+        print(overrideThermo)
+        print(overrideStartTime)
+        await asyncio.sleep(4)
+
 # turn on the boiler if average temp is under targetTemp for more than 30 seconds
 # turn off the boiler if average temp is over targetTemp for more than 30 seconds
 async def main():
@@ -242,6 +320,7 @@ async def main():
     asyncio.create_task(boilerControl())
     asyncio.create_task(displayWebPage())
     asyncio.create_task(updateDisplay())
+    #asyncio.create_task(debugMe())
 
     print("running!")
 

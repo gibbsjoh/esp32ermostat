@@ -20,6 +20,28 @@
         p {
             font-size: 1.5rem;
         }
+        .btn-link-on {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: green;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            }
+            .btn-link-on:hover {
+            background-color: darkgreen;
+        }
+        .btn-link-off {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: rgb(209, 3, 3);
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            }
+            .btn-link-off:hover {
+            background-color: rgb(61, 1, 1);
+        }
         input[type=submit] {
             display: inline-block;
             background-color: #e7bd3b;
@@ -48,6 +70,7 @@
         .button2 {
             background-color: #4286f4;
         }
+    
     </style>
 </head>
 
@@ -61,6 +84,10 @@
         <input type="text" id="target" name="target"><br>
         <input type="submit" value="Submit">
       </form>
+    
+    <a href="/?override=1" class="btn-link-on">Turn Heating On</a>
+    <a href="/?override=2" class="btn-link-off">Turn Heating Off</a>
+
 </body>
 
 </html>

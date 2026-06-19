@@ -23,6 +23,7 @@ print('Connected to Wi-Fi:', station.ifconfig())
 myIP = station.ipconfig("addr4")[0]
 
 # set the RTC via NTP for logging etc
+
 try:
     ntptime.settime()  # Syncs the ESP32's internal clock
     print("Time synchronized successfully!")
