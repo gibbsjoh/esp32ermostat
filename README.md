@@ -6,7 +6,11 @@ Simple Micropython setup for an ESP32 to act as a thermostat to control your hom
 
 Uses the 2-line LCD requires machine_i2c_lcd.py and lcd_api.py from https://github.com/dhylands/python_lcd which will need to be in the root path on the device.
 
+Kaluma code for the Pi Pico W / Pico 2 W is in the sensor directory
+
 Features:
 * Web interface to set the target temp which is used to turn the boiler on and off
 * Ability to manually turn on boiler with auto turn off in 20 mins (this can be changed in main.py)
 * Likewise, ability to manually turn off before the 20 mins
+
+I'm happy to accept changes! Especially looking for anyone with some other temp sensors to write a routine to get the temp for these.
