@@ -17,6 +17,7 @@ I'm happy to accept changes! Especially looking for anyone with some other temp 
 
 To Do / Ideas:
 * Nicer looking web interface
+* On 2 line display, show ambient/room temp as well. Poss on line 1 like this: TT: 19 / RT: 18
 * Support for OLED display or possibly e-ink (also to show current ambient temp)
 * Push-button control for when you don't feel like loading up the web interface
 * Audible on/off feedback (like a beep when it turns on and double when turns off)
