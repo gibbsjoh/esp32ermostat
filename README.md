@@ -14,3 +14,10 @@ Features:
 * Likewise, ability to manually turn off before the 20 mins
 
 I'm happy to accept changes! Especially looking for anyone with some other temp sensors to write a routine to get the temp for these.
+
+To Do / Ideas:
+* Nicer looking web interface
+* Support for OLED display or possibly e-ink (also to show current ambient temp)
+* Push-button control for when you don't feel like loading up the web interface
+* Audible on/off feedback (like a beep when it turns on and double when turns off)
+* Play music when the boiler is on (KIDDING!)
