@@ -27,6 +27,7 @@
             color: white;
             text-decoration: none;
             border-radius: 5px;
+             font-size: 30px;
             }
             .btn-link-on:hover {
             background-color: darkgreen;
@@ -38,6 +39,7 @@
             color: white;
             text-decoration: none;
             border-radius: 5px;
+             font-size: 30px;
             }
             .btn-link-off:hover {
             background-color: rgb(61, 1, 1);
@@ -77,16 +79,16 @@
 <body>
     <h1>Thermostat</h1>
     <p><strong>Status: </strong>{boilerStatus}</p>
-    <p><strong>Current Room Temp: </strong> {roomTemp}</p>
-    <p><strong>Target Room Temp: </strong> {targetTemp}</p>
     <form action="/">
         <label>Desired Home Temperature:</label><br>
         <input type="text" id="target" name="target"><br>
         <input type="submit" value="Submit">
       </form>
-    
-    <a href="/?override=1" class="btn-link-on">Turn Heating On</a>
-    <a href="/?override=2" class="btn-link-off">Turn Heating Off</a>
+    <p><strong>Current Room Temp: </strong> {roomTemp}</p>
+    <p><strong>Target Room Temp: </strong> {targetTemp}</p>
+    <hr>
+    <p><a href="/?override=1" class="btn-link-on">Turn Heating On</a></p>
+    <p><a href="/?override=2" class="btn-link-off">Turn Heating Off</a></p>
 
 </body>
 
