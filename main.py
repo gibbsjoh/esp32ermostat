@@ -12,28 +12,6 @@ import ure
 from machine_i2c_lcd import I2cLcd
 import lcd_api
 
-print("Starting main.py")
-
-# ssid = config.ssid
-# password = config.password
-# station = network.WLAN(network.STA_IF)
-# station.active(True)
-# station.connect(ssid, password)
-# 
-# # connect to wifi
-# while not station.isconnected():
-#     print('Connecting....')
-#     pass
-# 
-# print('Connected to Wi-Fi:', station.ifconfig())
-# myIP = station.ipconfig("addr4")[0]
-# 
-# # set the RTC via NTP for logging etc
-# try:
-#     ntptime.settime()  # Syncs the ESP32's internal clock
-#     print("Time synchronized successfully!")
-# except Exception as e:
-#     print("Failed to sync time:", e)
 
 # set up socket for http server
 thisSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -53,7 +31,7 @@ boilerOnOff = "Off"
 rtc = RTC()
 
 #print the time for verification
-print(rtc.datetime())
+#print(rtc.datetime())
 
 # variable for overriding thermostat to manually turn on heat
 overrideThermo = 0
@@ -169,7 +147,7 @@ def getRunningAverage():
     if not tempBuffer:
         return None
     theAverageTemp = round(sum(tempBuffer) / len(tempBuffer),1)
-    print("Current average:", theAverageTemp)
+    #print("Current average:", theAverageTemp)
     return theAverageTemp
 
 async def updateDisplay():
@@ -203,16 +181,16 @@ async def boilerControl():
     # compare it to the target temp
     # turn boiler on or off accordingly
     while True:
-        print("Called boiler loop")
+        #print("Called boiler loop")
         currentAverage = getRunningAverage()
 
         if overrideThermo == 1:
             # check time elapsed since it was set
             timeNow = time.mktime(rtc.datetime())
-            print(timeNow)
-            print(overrideStartTime)
-            print(timeNow - overrideStartTime)
-            print(overrideMaxMins)
+            #print(timeNow)
+            #print(overrideStartTime)
+            #print(timeNow - overrideStartTime)
+            #print(overrideMaxMins)
             if timeNow - overrideStartTime > (overrideMaxMins):
                 # turn on and start timer
                 overrideThermo = 0
@@ -221,11 +199,11 @@ async def boilerControl():
                 boilerOnOff = "Off"
         elif ( currentAverage > targetTemp and overrideThermo == 0 ):
             relayPin(0)
-            print("Turning boiler off")
+            #print("Turning boiler off")
             boilerOnOff = "Off"
         elif ( currentAverage < targetTemp ):
             relayPin(1)
-            print("Turning boiler on")
+            #print("Turning boiler on")
             boilerOnOff = "On"
         await asyncio.sleep(20)
 
@@ -239,7 +217,7 @@ async def displayWebPage():
     global overrideMaxMins
     global overrideStartTime
     overrideThermoNow = 0
-    print("Webserver listening")
+    #print("Webserver listening")
     while True:
         # wrap the accept() in a try statement in case this function isn't currently the current task in the async business
         try:
@@ -248,7 +226,7 @@ async def displayWebPage():
             await asyncio.sleep_ms(10)
             continue
 
-        print('Got a connection from %s' % str(addr))
+        #print('Got a connection from %s' % str(addr))
         conn.setblocking(False)
          # Non-blocking recv
         try:
@@ -264,7 +242,7 @@ async def displayWebPage():
         overrideThermoValue = get_override_value(request)
         if targetTempValue:
             # set the target temp variable
-            print("Target set: ", targetTempValue)
+            #print("Target set: ", targetTempValue)
             #print("Debug vartype: " , type(targetTempValue))
             targetTemp = float(targetTempValue)
         if overrideThermoValue:
@@ -280,7 +258,7 @@ async def displayWebPage():
                 relayPin(1)
                 boilerOnOff = "On"
             else:
-                print("Already set on manually")
+                #print("Already set on manually")
         elif(overrideThermoNow == 2):
             # manually turn off before 20 mins
             overrideThermoNow = 0
@@ -322,7 +300,7 @@ async def main():
     asyncio.create_task(updateDisplay())
     #asyncio.create_task(debugMe())
 
-    print("running!")
+    #print("running!")
 
     # Keep main alive so tasks can run
     while True:
