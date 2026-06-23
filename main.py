@@ -257,9 +257,7 @@ async def displayWebPage():
                 overrideStartTime = time.mktime(rtc.datetime())
                 relayPin(1)
                 boilerOnOff = "On"
-            else:
-                #print("Already set on manually")
-        elif(overrideThermoNow == 2):
+        elif overrideThermoNow == 2:
             # manually turn off before 20 mins
             overrideThermoNow = 0
             overrideThermo = 0
