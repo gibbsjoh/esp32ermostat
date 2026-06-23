@@ -14,27 +14,6 @@ import lcd_api
 
 print("Starting main.py")
 
-# ssid = config.ssid
-# password = config.password
-# station = network.WLAN(network.STA_IF)
-# station.active(True)
-# station.connect(ssid, password)
-# 
-# # connect to wifi
-# while not station.isconnected():
-#     print('Connecting....')
-#     pass
-# 
-# print('Connected to Wi-Fi:', station.ifconfig())
-# myIP = station.ipconfig("addr4")[0]
-# 
-# # set the RTC via NTP for logging etc
-# try:
-#     ntptime.settime()  # Syncs the ESP32's internal clock
-#     print("Time synchronized successfully!")
-# except Exception as e:
-#     print("Failed to sync time:", e)
-
 # set up socket for http server
 thisSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 thisSocket.setblocking(False) # need to set non blocking so async works!
@@ -70,21 +49,34 @@ tempBuffer = []
 bufferIndex = 0
 bufferFilled = False
 
+# type of remote sensor - this is not currently in use
+# pi-pico-default is for the Pi Pico running the Kaluma code in the sensor dir
+sensorType = "pi-pico-default"
+# URL to query for the temperature from the remote sensor
 sensorURL = "http://192.168.0.248"
 
-# set up 2 line display on i2c
-# Define the LCD I2C address and dimensions
-i2cAddress = 0x27
-ic2Rows = 2
-i2cCols = 16
+# set the display type here (i2clcd, oled, or none - more can be added)
+displayType = "none"
 
-# Initialize I2C and LCD objects
-i2c = I2C(1, sda=Pin(21), scl=Pin(22))
-lcd = I2cLcd(i2c, i2cAddress, ic2Rows, i2cCols)
-
-# show a welcome message
-lcd.move_to(0, 0)
-lcd.putstr("Welcome!")
+if displayType == "i2clcd":
+    # ****** Start I2C 2 line LCD setup *************
+    # Define the LCD I2C address and dimensions
+    i2cAddress = 0x27
+    ic2Rows = 2
+    i2cCols = 16
+    # Initialize I2C and LCD objects
+    i2c = I2C(1, sda=Pin(21), scl=Pin(22))
+    lcd = I2cLcd(i2c, i2cAddress, ic2Rows, i2cCols)
+    # show a welcome message
+    lcd.move_to(0, 0)
+    lcd.putstr("Welcome!")
+    # ****** End I2C 2 line LCD setup ***************
+elif displayType == "oled":
+    #tbd
+    print("oled tbd")
+else:
+    # no display type or undefined
+    print("Undefined or no display")
 
 # load the html
 def web_page():
@@ -172,19 +164,26 @@ def getRunningAverage():
     print("Current average:", theAverageTemp)
     return theAverageTemp
 
-async def updateDisplay():
+async def updateDisplay(displayType):
     # updates the status display every 25 seconds
+    # 22/06/26 change - if there's no display attached, don't do anything... [wip]
     global targetTemp
     global boilerOnOff
     global lcd
     while True:
-        line1 = "Target: " + str(targetTemp)
-        line2 = "Boiler is: " + boilerOnOff.upper()
-        lcd.clear()
-        lcd.move_to(0, 0)
-        lcd.putstr(line1)
-        lcd.move_to(0, 1)
-        lcd.putstr(line2)
+        if displayType == "i2clcd":
+            line1 = "Target: " + str(targetTemp)
+            line2 = "Boiler is: " + boilerOnOff.upper()
+            lcd.clear()
+            lcd.move_to(0, 0)
+            lcd.putstr(line1)
+            lcd.move_to(0, 1)
+            lcd.putstr(line2)
+        elif displayType == "oled":
+            print("tbd")
+        else:
+            # no or undefined display type, do nothing
+            print("No or undefined display type")
         
         await asyncio.sleep(25)
 
@@ -319,7 +318,7 @@ async def main():
     asyncio.create_task(getTempLoop())
     asyncio.create_task(boilerControl())
     asyncio.create_task(displayWebPage())
-    asyncio.create_task(updateDisplay())
+    asyncio.create_task(updateDisplay(displayType))
     #asyncio.create_task(debugMe())
 
     print("running!")
