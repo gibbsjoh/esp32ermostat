@@ -57,8 +57,14 @@ ic2Rows = 2
 i2cCols = 16
 
 # Initialize I2C and LCD objects
-i2c = I2C(1, sda=Pin(21), scl=Pin(22))
+# amend 29/06/26 to move pin numbers to variables.
+# for pi pico, use I2C bus 0, SDA -> 26, SCL -> 27
+i2cSDAPin = Pin(21) 
+i2cSCLPin =Pin(22)
+i2CBusNo = 1
+i2c = I2C(i2CBusNo, sda=i2cSDAPin, scl=i2cSCLPin)
 lcd = I2cLcd(i2c, i2cAddress, ic2Rows, i2cCols)
+
 
 # show a welcome message
 lcd.move_to(0, 0)
