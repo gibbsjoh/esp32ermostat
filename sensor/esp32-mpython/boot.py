@@ -16,10 +16,10 @@ station = network.WLAN(network.STA_IF)
 station.active(True)
 
 # set ssid/password
-ssid = "iot_wlan" # hard coded
+ssid = "mySSID" # hard coded
 # ssid = config.ssid # from a config.py file
 
-password = "Motorola68040" # hard coded
+password = "somePass" # hard coded
 # ssid = config.password # from a config.py file
 
 # connect

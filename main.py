@@ -40,6 +40,12 @@ overrideMaxMins = 20 # will revert to thermo control after this many minutes
 overrideStartTime = 1 # using epoch time, set to 1 so we have declared the variable
 targetTemp = 19 # target temp for the boiler to achieve - set to something around what you'd usually have
 
+# adding scheduling ability
+# set automatic target temps based on time of day
+# see schedule.py for example formatting
+# we need to set a mode variable to allow override of the auto settings - scheduled or manual
+# if manual, then it stays at that temp until a. it's set back to automatic OR the schedule changes from one setting to another
+thermoMode = "scheduled" 
 
 
 # get the temp every 30 seconds and create a rolling average over 5 mins
@@ -116,21 +122,39 @@ def dechunk(raw):
     return out
 
 # function to get target temp value from the request from the setup webpage
-def get_target_value(theRequest):
+
+# 29/06/26 - combining all of the get value from URL functions into one
+def getParamsFromURL(theRequest):
     reqString = theRequest.decode() # convert bytes to a string
-    key = "?target=" # set what we're looking for
-    idx = reqString.find(key)
-    if idx == -1:
-        return None # returns None if called w/out the temp setting
+    tempKey = "target="
+    overrideKey = "override="
+    modeKey = "mode="
+    tempIdx = reqString.find(tempKey)
+    
+    tempStart = idx + len(tempKey)
+    tempEnd = reqString.find("&", tempStart) if reqString.find("&", tempStart) != -1 else reqString.find(" ", tempStart)  # end of URL path
 
-    start = idx + len(key)
-    end = reqString.find(" ", start)  # end of URL path
-    if end == -1:
-        end = len(reqString)
+def getTargetValFromURL(theRequest):
+    reqString = theRequest.decode() # convert bytes to a string
+    urlKeys = ["target=", "override=","mode="]
+    theResult = []
+    for key in urlKeys:
+        idx = reqString.find(key)
+        if idx == -1:
+            theValue = ""
+        else:
+            theStart = idx + len(key)
+            end = reqString.find("%", start) if reqString.find("%", start) != -1 else reqString.find("&", start)
+            theValue = reqString[start:end]
+        if (key == "target="):
+            theResult.append({"targetTemp",theValue})
+        elif (key == "override="):
+            theResult.append({"override",theValue})
+        elif (key == "mode="):
+            theResult.append({"mode",theValue})
+    return theResult
 
-    return reqString[start:end]
-
-def get_override_value(theRequest):
+def getOverrideValFromURL(theRequest):
     reqString = theRequest.decode() # convert bytes to a string
     key = "?override=" # set what we're looking for
     idx = reqString.find(key)
@@ -164,6 +188,30 @@ def getRunningAverage():
     print("Current average:", theAverageTemp)
     return theAverageTemp
 
+# ***************** Auto Schedule functions here! ******************
+def convertTimeToMinutes(theTime):
+    h, m = map(int, tstr.split(":"))
+    return h * 60 + m
+
+def getTemperatureFromSchedule(scheduleRules):
+    timeNow = rtc.datetime()
+    timeNowMins = timeNow[3] * 60 + timeNow[4]
+
+    for rule in scheduleRules:
+        start = convertTimeToMinutes(rule["start"])
+        end   = convertTimeToMinutes(rule["end"])
+
+        if checkTimeInRange(timeNowMins, start, end):
+            return rule["value"]
+
+    return None
+
+def checkTimeInRange(timeNow, startTime, endTime):
+    if startTime <= endTime:
+        return startTime <= timeNow <= endTime
+    return timeNow >= startTime or timeNow <= endTime
+# ******************************************************************
+
 async def updateDisplay(displayType):
     # updates the status display every 25 seconds
     # 22/06/26 change - if there's no display attached, don't do anything... [wip]
@@ -191,6 +239,18 @@ async def getTempLoop():
     while True:
         addCurrentTempToBuffer()
         await asyncio.sleep(15)   # 15‑second interval
+
+async def getScheduledTemp():
+    global targetTemp
+    global thermoMode
+    global scheduleRules
+    while True:
+        scheduledTemp = getTemperatureFromSchedule(scheduleRules)
+        if thermoMode == "automatic" and targetTemp != scheduledTemp:
+            targetTemp = scheduledTemp
+        
+        await asyncio.sleep(60) # check every minute
+
         
 async def boilerControl():
     global targetTemp
@@ -198,13 +258,14 @@ async def boilerControl():
     global overrideThermo
     global overrideStartTime
     global overrideMaxMins
+    global thermoMode
     # get the average temperature
     # compare it to the target temp
     # turn boiler on or off accordingly
     while True:
         print("Called boiler loop")
         currentAverage = getRunningAverage()
-
+        # extra logic for thermoMode (scheduled/manual)
         if overrideThermo == 1:
             # check time elapsed since it was set
             timeNow = time.mktime(rtc.datetime())
@@ -258,9 +319,9 @@ async def displayWebPage():
             await asyncio.sleep_ms(1)
             continue
         
-        # ** get the temp value using get_target_value(theRequest)
-        targetTempValue = get_target_value(request)
-        overrideThermoValue = get_override_value(request)
+        # ** get the temp value using getTargetValFromURL(theRequest)
+        targetTempValue = getTargetValFromURL(request)
+        overrideThermoValue = getOverrideValFromURL(request)
         if targetTempValue:
             # set the target temp variable
             print("Target set: ", targetTempValue)
@@ -319,6 +380,8 @@ async def main():
     asyncio.create_task(boilerControl())
     asyncio.create_task(displayWebPage())
     asyncio.create_task(updateDisplay(displayType))
+    asyncio.create_task(getScheduledTemp())
+    
     #asyncio.create_task(debugMe())
 
     print("running!")

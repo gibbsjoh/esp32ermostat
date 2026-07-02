@@ -3,5 +3,5 @@
 
 scheduleRules = [
     {"start": "07:00", "end": "19:59", "value": 20},
-    {"start": "20:0", "end": "06:59", "value": 25},
+    {"start": "20:0", "end": "06:59", "value": 19},
 ]
