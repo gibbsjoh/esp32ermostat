@@ -8,8 +8,28 @@ import config
 import ntptime
 import urequests
 
-ssid = config.ssid
-password = config.password
+# scan for best signal
+myWifiNets = config.myWifiNets
+myWifiNames = list(myWifiNets.keys())
+availNets = station.scan()
+sigStrenths = {}
+for ssid, bssid, channel, rssi, authmode, hidden in availNets:
+        ssidString = ssid.decode('utf-8') if isinstance(ssid, bytes) else ssid
+        if ssidString in myWifiNames:
+            sigStrenths[ssidString] = rssi
+
+# get strongest
+maxRSSI = max(sigStrenths.values())
+theBestNet = [k for k in sigStrenths if sigStrenths[k] == maxRSSI]
+theBestNet = str(theBestNet[0])
+theBestNetPass = myWifiNets[theBestNet]
+            
+
+
+# set ssid/password
+ssid = theBestNet # from a config.py file
+password = theBestNetPass # from a config.py file
+
 station = network.WLAN(network.STA_IF)
 station.active(True)
 station.connect(ssid, password)
@@ -19,7 +39,7 @@ while not station.isconnected():
     print('Connecting....')
     pass
 
-print('Connected to Wi-Fi:', station.ifconfig())
+print('Connected to Wi-Fi:', theBestNet, station.ifconfig())
 myIP = station.ipconfig("addr4")[0]
 
 # set the RTC via NTP for logging etc

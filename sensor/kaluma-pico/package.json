@@ -1,0 +1,5 @@
+{
+  "dependencies": {
+    "dht": "github:niklauslee/dht"
+  }
+}

@@ -1,7 +1,7 @@
 # ESP very basic thermostat control
 # uses external sensor via requests/GET
 
-from machine import Pin, I2C, RTC
+from machine import Pin, I2C, RTC, WDT
 import time
 import socket
 import config
@@ -11,6 +11,7 @@ import asyncio
 import ure
 from machine_i2c_lcd import I2cLcd
 import lcd_api
+import uping
 
 
 # set up socket for http server
@@ -33,6 +34,9 @@ rtc = RTC()
 #print the time for verification
 #print(rtc.datetime())
 
+# watchdog timer to reboot if we freeze
+theWatchdog = WDT(timeout=10000)
+
 # variable for overriding thermostat to manually turn on heat
 overrideThermo = 0
 overrideMaxMins = 20 # will revert to thermo control after this many minutes
@@ -50,25 +54,28 @@ bufferFilled = False
 
 sensorURL = "http://192.168.0.248"
 
-# set up 2 line display on i2c
-# Define the LCD I2C address and dimensions
-i2cAddress = 0x27
-ic2Rows = 2
-i2cCols = 16
+useDisplay = 0
 
-# Initialize I2C and LCD objects
-# amend 29/06/26 to move pin numbers to variables.
-# for pi pico, use I2C bus 0, SDA -> 26, SCL -> 27
-i2cSDAPin = Pin(21) 
-i2cSCLPin =Pin(22)
-i2CBusNo = 1
-i2c = I2C(i2CBusNo, sda=i2cSDAPin, scl=i2cSCLPin)
-lcd = I2cLcd(i2c, i2cAddress, ic2Rows, i2cCols)
+if useDisplay == 1:
+    # set up 2 line display on i2c
+    # Define the LCD I2C address and dimensions
+    i2cAddress = 0x27
+    ic2Rows = 2
+    i2cCols = 16
+
+    # Initialize I2C and LCD objects
+    # amend 29/06/26 to move pin numbers to variables.
+    # for pi pico, use I2C bus 0, SDA -> 26, SCL -> 27
+    i2cSDAPin = Pin(21) 
+    i2cSCLPin =Pin(22)
+    i2CBusNo = 1
+    i2c = I2C(i2CBusNo, sda=i2cSDAPin, scl=i2cSCLPin)
+    lcd = I2cLcd(i2c, i2cAddress, ic2Rows, i2cCols)
 
 
-# show a welcome message
-lcd.move_to(0, 0)
-lcd.putstr("Welcome!")
+    # show a welcome message
+    lcd.move_to(0, 0)
+    lcd.putstr("Welcome!")
 
 # load the html
 def web_page():
@@ -160,15 +167,15 @@ async def updateDisplay():
     # updates the status display every 25 seconds
     global targetTemp
     global boilerOnOff
-    global lcd
+    #global lcd
     while True:
         line1 = "Target: " + str(targetTemp)
         line2 = "Boiler is: " + boilerOnOff.upper()
-        lcd.clear()
-        lcd.move_to(0, 0)
-        lcd.putstr(line1)
-        lcd.move_to(0, 1)
-        lcd.putstr(line2)
+        # lcd.clear()
+        # lcd.move_to(0, 0)
+        # lcd.putstr(line1)
+        # lcd.move_to(0, 1)
+        # lcd.putstr(line2)
         
         await asyncio.sleep(25)
 
@@ -285,6 +292,17 @@ async def displayWebPage():
 
         await asyncio.sleep(1)
 
+async def keepAlive():
+    while True:
+        uping.ping("192.168.0.1", count=2, timeout=5000, interval=1000, quiet=True)
+        await asyncio.sleep(123)
+
+async def watchdogFeed():
+    while True:
+        theWatchdog.feed()
+        await asyncio.sleep(4) # Feed every 4 seconds
+
+
 async def debugMe():
     global overrideThermo
     global overrideStartTime
@@ -302,14 +320,13 @@ async def main():
     asyncio.create_task(boilerControl())
     asyncio.create_task(displayWebPage())
     asyncio.create_task(updateDisplay())
+    asyncio.create_task(keepAlive())
+    asyncio.create_task(watchdogFeed())
     #asyncio.create_task(debugMe())
 
-    #print("running!")
-
-    # Keep main alive so tasks can run
-    while True:
-        await asyncio.sleep(1)
-
-
-asyncio.run(main())
+        
+# run main() forever AND EVER AND EVER
+loop = asyncio.get_event_loop()  
+loop.create_task(main())  # Create a task to run the main function
+loop.run_forever()  # Run the event loop indefinitely
     
