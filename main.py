@@ -312,8 +312,6 @@ async def debugMe():
         print(overrideStartTime)
         await asyncio.sleep(4)
 
-# turn on the boiler if average temp is under targetTemp for more than 30 seconds
-# turn off the boiler if average temp is over targetTemp for more than 30 seconds
 async def main():
     # main function to tie it all togetrher
     asyncio.create_task(getTempLoop())
@@ -323,8 +321,7 @@ async def main():
     asyncio.create_task(keepAlive())
     asyncio.create_task(watchdogFeed())
     #asyncio.create_task(debugMe())
-
-        
+    
 # run main() forever AND EVER AND EVER
 loop = asyncio.get_event_loop()  
 loop.create_task(main())  # Create a task to run the main function
